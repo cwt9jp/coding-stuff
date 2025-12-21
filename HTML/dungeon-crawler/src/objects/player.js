@@ -10,15 +10,14 @@ class Player extends Phaser.GameObjects.Rectangle {
         this.body.collideWorldBounds = true;
         this.setScale(1);
 
-        // Add player hitbox for collision with objects
-        this.hitbox = this.scene.add.rectangle(0, 0, 6, 12);
-        
-        this.hitbox.setOrigin(0.5, 0.5);
-        this.scene.physics.add.existing(this.hitbox);
-        
+        this.body.setSize(12, 8);
+        this.body.setOffset(0, 16);
+        this.body.setMass(5);
 
         this.canMove = true;
         this.canDash = true;
+        this.hittable = false;
+
     }
 
     /**
@@ -79,6 +78,40 @@ class Player extends Phaser.GameObjects.Rectangle {
 
     updateDepth() {
         this.setDepth(this.y);
+    }
+
+    /**
+     * Initiate attack on enemies depending on pointer
+     */
+    attack(pointer) {
+
+        const pointerD = {
+            x: pointer.x - this.x,
+            y: pointer.y - this.y
+        };
+
+        // Note that d.r is not necessary but could be later for different weapons
+        // pointerD.r = Math.sqrt(pointerD.x * pointerD.x + pointerD.y * pointerD.y);
+        pointerD.theta = Math.atan2(pointerD.y, pointerD.x);
+
+        // Use overlapCirc to find enemies to hit
+        let overlappingBodies = this.scene.physics.overlapRect(this.x - 15, this.y - 15, 30, 30);
+
+        overlappingBodies.forEach((body) => {
+            if (body.gameObject.hittable) {
+                const d = {
+                    x: body.x - this.x,
+                    y: body.y - this.y
+                }
+                d.theta = Math.atan2(body.y - this.y, body.x - this.x);
+
+                if (Math.abs(d.theta - pointerD.theta) < Math.PI / 4) {
+                    body.gameObject.attacked(d.theta); // TODO: Damage
+                } else if (d.x * d.x + d.y * d.y < 100) {
+                    body.gameObject.attacked(pointerD.theta);
+                }
+            }
+        });
     }
 }
 

@@ -1,20 +1,24 @@
 import { Start } from './scenes/Start.js';
+import { Map } from './scenes/Map.js';
 
 const config = {
     type: Phaser.AUTO,
-    title: 'Overlord Rising',
+    title: 'The Stronghold',
     description: '',
     parent: 'game-container',
-    width: 240,
-    height: 138,
+    width: 64 * 16,
+    height: 64 * 16,
     backgroundColor: '#000000',
     physics: {
-        default: "arcade"
+        default: "arcade",
+        arcade: {
+            debug: false
+        }
     },
     pixelArt: true,
     zoom: 3,
     scene: [
-        Start
+        Map
     ],
     scale: {
         mode: Phaser.Scale.FIT,
