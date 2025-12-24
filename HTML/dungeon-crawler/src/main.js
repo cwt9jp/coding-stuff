@@ -6,9 +6,9 @@ const config = {
     title: 'The Stronghold',
     description: '',
     parent: 'game-container',
-    width: 64 * 16,
-    height: 64 * 16,
-    backgroundColor: '#000000',
+    width: 64,
+    height: 64,
+    backgroundColor: '#ffffff',
     physics: {
         default: "arcade",
         arcade: {
