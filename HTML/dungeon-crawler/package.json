@@ -1,0 +1,21 @@
+{
+  "dependencies": {
+    "phaser": "^4.2.1"
+  },
+  "name": "dungeon-crawler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "phaser.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "webpack": "^5.109.2",
+    "webpack-cli": "^7.2.2",
+    "webpack-dev-server": "^6.0.0"
+  }
+}

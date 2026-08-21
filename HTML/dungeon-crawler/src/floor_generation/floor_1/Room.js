@@ -64,6 +64,11 @@ class Room {
         this.height = height;
 
         /**
+         * The direction the room faces (0 - top, 1 - right, 2 - bottom, 3 - left)
+         */
+        this.direction = side;
+
+        /**
          * The scene the room is in
          */
         this.scene = scene;
@@ -143,43 +148,67 @@ class Room {
     checkOverlap(room) {
         // First check bounding box
         if (
-            this.boundingBox.xMin > room.boundingBox.xMax 
-            || room.boundingBox.xMin > this.boundingBox.xMax
-            || this.boundingBox.yMin > room.boundingBox.yMax
-            || room.boundingBox.yMin > this.boundingBox.yMax
+            this.boundingBox.xMin >= room.boundingBox.xMax 
+            || room.boundingBox.xMin >= this.boundingBox.xMax
+            || this.boundingBox.yMin >= room.boundingBox.yMax
+            || room.boundingBox.yMin >= this.boundingBox.yMax
         ) {
             return false;
         } else if (!this.boundsModified && !room.boundsModified) {
             return true;
         }
         
-        // Next check bounds
-        let overlapping = false;
+        // Rectangles exactly the same?
+        if (this.boundingBox === room.boundingBox) { return true; }
 
+        // Next check bounds
         for (let i = 0; i < room.bounds.length; i++) {
             if (this.pointInRoom(room.bounds[i])) {
-                overlapping = true;
-                break;
+                return true;
             }
-        }
-        
-        if (overlapping === true) {
-            return true;
         }
 
         // Finally, check all boundary points
-        for (let i = 0; i < this.bounds.length; i++) {
-            const NEXT_INDEX = (i + 1) % this.bounds.length;
-            const point1 = this.bounds[i];
-            const point2 = this.bounds[NEXT_INDEX];
+        for (let i = 0; i < room.bounds.length; i++) {
+            const NEXT_INDEX = (i + 1) % room.bounds.length;
+            const point1 = room.bounds[i];
+            const point2 = room.bounds[NEXT_INDEX];
 
             switch (i % 2) {
                 case 0:
-                    for (let x = point1.x + 1; x < point2.x; x++) {
-                        
+                    if (point1.x < point2.x) {
+                        for (let x = point1.x + 1; x < point2.x; x++) {
+                            if (this.pointInRoom({ x: x, y: point1.y })) {
+                                return true;
+                            }
+                        }
+                    } else {
+                        for (let x = point2.x + 1; x < point1.x; x++) {
+                            if (this.pointInRoom({ x: x, y: point2.y })) {
+                                return true;
+                            }
+                        }
                     }
+                    break;
+                case 1:
+                    if (point1.y < point2.y) {
+                        for (let y = point1.y + 1; y < point2.y; y++) {
+                            if (this.pointInRoom({ x: point1.x, y: y })) {
+                                return true;
+                            }
+                        }
+                    } else {
+                        for (let y = point2.y + 1; y < point1.y; y++) {
+                            if (this.pointInRoom({ x: point2.x, y: y })) {
+                                return true;
+                            }
+                        }
+                    }
+                    break;
             }
-        }     
+        }
+
+        return false;
     }
 
 
@@ -303,14 +332,41 @@ class Room {
      * Renders room to the screen. TODO: tilemap
      */
     render() {
+        let color = 0;
+        switch (this.type) {
+            case 0:
+                color = 0x000000; // passive - black
+                break;
+            case 1:
+                color = 0xffff00; // chest - yellow
+                break;
+            case 2:
+                color = 0xff9900; // puzzle - orange
+                break;
+            case 3:
+                color = 0xff00ff; // fort - purple
+                break;
+            case 4:
+                color = 0xff0000; // aggressive - red
+                break;
+            case 5:
+                color = 0x00ff00; // exit - green
+                break;
+            case 6:
+                color = 0x0000ff; // entrance - blue
+                break;
+        }
+
         // Right now this is very naive.
         this.forEachSide((point1, point2, index) => {
             if (index % 2 === 0) {
-                this.scene.add.rectangle((point1.x + point2.x) / 2 + 1, point1.y, Math.abs(point2.x - point1.x) + 1, 1, 0x000000);
+                this.scene.add.rectangle((point1.x + point2.x) / 2 + 1, point1.y, Math.abs(point2.x - point1.x) + 1, 1, color);
             } else {
-                this.scene.add.rectangle(point1.x + 1, (point1.y + point2.y) / 2, 1, Math.abs(point2.y - point1.y) + 1, 0x000000);
+                this.scene.add.rectangle(point1.x + 1, (point1.y + point2.y) / 2, 1, Math.abs(point2.y - point1.y) + 1, color);
             }
         });
+
+        return this;
     }
 }
 

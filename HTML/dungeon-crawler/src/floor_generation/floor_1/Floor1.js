@@ -62,7 +62,7 @@ class Floor1 {
         }
         
         // Generation loop
-        for (let i = 0; i < this.roomNumber; i++) {
+        for (let i = 0; i < this.roomNumber - 1; i++) {
             for (let j = 0; j < 5 * i + 1; j++) {
                 // Random room
                 const adjacentRoom = Phaser.Math.RND.weightedPick(this.rooms);
@@ -71,46 +71,40 @@ class Floor1 {
                 // Random side
                 const side = [adjacentRoom.bounds[sideIndex], adjacentRoom.bounds[(sideIndex + 1) % adjacentRoom.bounds.length]];
 
-                // Now decide whether the room will be L-shaped or not
-                if (true) {
-                    const potentialRoom = new Room(
-                        this.scene,
-                        Phaser.Math.RND.between(side[0].x, side[1].x),
-                        Phaser.Math.RND.between(side[0].y, side[1].y),
-                        Phaser.Math.RND.weightedPick([10, 11, 12, 13, 14, 15, 16, 17, 18]),
-                        Phaser.Math.RND.weightedPick([10, 11, 12, 13, 14, 15, 16, 17, 18]),
-                        adjacentRoom.sideDirection(sideIndex),
-                        ((i) => {
-                            if (i === this.roomNumber - 1) {
-                                return 5;
-                            } else {
-                                return Phaser.Math.RND.weightedPick([4, 2, 0, 3, 1]);
-                            }
-                        })(i)
-                    );
+                const potentialRoom = new Room(
+                    this.scene,
+                    Phaser.Math.RND.between(side[0].x, side[1].x),
+                    Phaser.Math.RND.between(side[0].y, side[1].y),
+                    Phaser.Math.RND.weightedPick([10, 11, 12, 13, 14, 15, 16, 17, 18]),
+                    Phaser.Math.RND.weightedPick([10, 11, 12, 13, 14, 15, 16, 17, 18]),
+                    adjacentRoom.sideDirection(sideIndex),
+                    Phaser.Math.RND.weightedPick([4, 4, 3, 0, 2, 1])
+                );
 
-                    let overlapped = false;
-                    for (let k = 0; k < this.rooms.length; k++) {
-                        if (this.rooms[k].checkOverlap(potentialRoom) || potentialRoom.checkOverlap(this.rooms[k])) {
-                            overlapped = true;
-                            break;
-                        }
-                    }
-
-                    if (overlapped) {
-                        continue;
-                    } else {
-                        this.rooms.push(potentialRoom);
-                        break;
-                    }
+                // Make room L-shaped
+                if (Phaser.Math.RND.between(1, 3) === 1) {
+                    potentialRoom.removeArea({
+                        x: Phaser.Math.RND.between(5, potentialRoom.width - 5),
+                        y: Phaser.Math.RND.between(3, potentialRoom.height - 5)
+                    }, Phaser.Math.RND.pick([potentialRoom.direction, (potentialRoom.direction + 1) % potentialRoom.bounds.length]))
                 }
+
+                if (!this.checkPotentialOverlap(potentialRoom)) {
+                    this.rooms.push(potentialRoom);
+                    break;
+                } else continue;
             }
         }
         
+        // Last two rooms - fort and exit
+        this.rooms.at(-2).type = 3;
+        this.rooms.at(-1).type = 5;
+
         this.rooms.forEach((room) => {
             room.render();
         })
 
+        console.log(this);
         return this;
     }
 
@@ -128,6 +122,19 @@ class Floor1 {
         }
     }
     
+    /**
+     * Checks if a potential room overlaps with other rooms on the floor.
+     * @param {Room} potentialRoom The room to check overlap with.
+     */
+    checkPotentialOverlap(potentialRoom) {
+        for (let k = 0; k < this.rooms.length; k++) {
+            if (this.rooms[k].checkOverlap(potentialRoom) || potentialRoom.checkOverlap(this.rooms[k])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 
 export default Floor1;
