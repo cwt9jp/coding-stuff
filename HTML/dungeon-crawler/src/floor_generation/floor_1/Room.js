@@ -1,3 +1,5 @@
+import Phaser from "phaser";
+
 /**
  * Class handles Room generation, overlap, and handling all interactions
  * within their area.
@@ -5,39 +7,40 @@
 class Room {
 
     /**
-     * Create a new Room. Note that the x and y coordinates, along with the side, determine
-     * how the room is generated. For example, if the side index is 0, the x and y coordinates
+    * Create a new Room. Note that the u and v coordinates, along with the side, determine
+    * how the room is generated. For example, if the side index is 0, the u and v coordinates
      * are the midpoint of the bottom side of the room. This is to make generating rooms that are
      * adjacent to one another easy.
      * @param {Phaser.Scene} scene The sceen this room will be in
-     * @param {number} x The x-position of the entrance to the room
-     * @param {number} y The y-position of the entrance to the room
+     * @param {number} u The u-position of the entrance to the room
+     * @param {number} v The v-position of the entrance to the room
      * @param {number} width The width of the room
      * @param {number} height The height of the room
+     * @type {Array<{ u: number, v: number }>} 
      * @param {0 | 1 | 2 | 3} side The side of the room that this room will be generating next to. 0 - top, 1 - right, 2 - bottom, 3 - left
-     * @param {0 | 1 | 2 | 3 | 4 | 5 | 6} type The type of room this will be. 0 - passive, 1 - chest, 2 - puzzle, 3 - fort, 4 - aggressive, 5 - exit, 6 - entrance
+     * @param {0 | 1 | 2 | 3 | 4 | 5 | 6} type The type of room this will be. 0 - aggressive, 1 - fort, 2 - passive, 3 - puzzle, 4 - chest, 5 - exit, 6 - entrance
      */
-    constructor(scene, x, y, width, height, side, type) {
+    constructor(scene, u, v, width, height, side, type) {
 
         /**
          * The bounds of the room
-         * @type {Array<{ x: number, y: number }>} 
+         * @type {Array<{ u: number, v: number }>} 
          */
         this.bounds = [];
         
         // Determine bounds based on the side that the room is generating adjacent to
         switch (side) {
             case 0:
-                this.bounds = [{x: Math.trunc(x - (width - 1) / 2), y: Math.trunc(y - (height - 1))}, {x: Math.trunc(x + (width - 1) / 2), y: Math.trunc(y - (height - 1))}, {x: Math.trunc(x + (width - 1) / 2), y: y}, {x: Math.trunc(x - (width - 1) / 2), y: y}];
+                this.bounds = [{u: Math.floor(u - (width - 1) / 2), v: Math.floor(v - (height - 1))}, {u: Math.floor(u + (width - 1) / 2), v: Math.floor(v - (height - 1))}, {u: Math.floor(u + (width - 1) / 2), v: v}, {u: Math.floor(u - (width - 1) / 2), v: v}];
                 break;
             case 1:
-                this.bounds = [{x: x, y: Math.trunc(y - (height- 1) / 2)}, {x: Math.trunc(x + (width - 1)), y: Math.trunc(y - (height- 1) / 2)}, {x: Math.trunc(x + (width - 1)), y: Math.trunc(y + (height - 1) / 2)}, {x: x, y: Math.trunc(y + (height - 1) / 2)}];
+                this.bounds = [{u: u, v: Math.floor(v - (height- 1) / 2)}, {u: Math.floor(u + (width - 1)), v: Math.floor(v - (height- 1) / 2)}, {u: Math.floor(u + (width - 1)), v: Math.floor(v + (height - 1) / 2)}, {u: u, v: Math.floor(v + (height - 1) / 2)}];
                 break;
             case 2:
-                this.bounds = [{x: Math.trunc(x - (width - 1) / 2), y: y}, {x: Math.trunc(x + (width - 1) / 2), y: y}, {x: Math.trunc(x + (width - 1) / 2), y: Math.trunc(y + (height - 1))}, {x: Math.trunc(x - (width - 1) / 2), y: Math.trunc(y + (height- 1))}];
+                this.bounds = [{u: Math.floor(u - (width - 1) / 2), v: v}, {u: Math.floor(u + (width - 1) / 2), v: v}, {u: Math.floor(u + (width - 1) / 2), v: Math.floor(v + (height - 1))}, {u: Math.floor(u - (width - 1) / 2), v: Math.floor(v + (height- 1))}];
                 break;
             case 3:
-                this.bounds = [{x: Math.trunc(x - (width - 1)), y: Math.trunc(y - (height - 1) / 2)}, {x: x, y: Math.trunc(y - (height - 1) / 2)}, {x: x, y: Math.trunc(y + (height - 1) / 2)}, {x: Math.trunc(x - (width - 1)), y: Math.trunc(y + (height - 1) / 2)}];
+                this.bounds = [{u: Math.floor(u - (width - 1)), v: Math.floor(v - (height - 1) / 2)}, {u: u, v: Math.floor(v - (height - 1) / 2)}, {u: u, v: Math.floor(v + (height - 1) / 2)}, {u: Math.floor(u - (width - 1)), v: Math.floor(v + (height - 1) / 2)}];
                 break;
             default:
                 throw new Error(`Side index ${side} is not between 0-3`);
@@ -47,10 +50,10 @@ class Room {
          * The bounding box of the room, which the room will never be outside of.
          */
         this.boundingBox = {
-            xMin: this.bounds[0].x,
-            yMin: this.bounds[0].y,
-            xMax: this.bounds[2].x,
-            yMax: this.bounds[2].y
+            uMin: this.bounds[0].u,
+            vMin: this.bounds[0].v,
+            uMax: this.bounds[2].u,
+            vMax: this.bounds[2].v
         };
 
         /**
@@ -79,61 +82,137 @@ class Room {
         this.type = type;
 
         /**
-         * Whether the room already has an area removed
+         * Whether the room has an area removed
          */
         this.boundsModified = false;
 
         /**
-         * The x-coordinate of the top-left corner of the room
+         * The u-coordinate of the top-left corner of the room
          */
-        this.x = this.bounds[0].x;
+        this.u = this.bounds[0].u;
 
         /**
-         * The y-coordinate of the top-left corner of the room
+         * The v-coordinate of the top-left corner of the room
          */
-        this.y = this.bounds[0].y;
+        this.v = this.bounds[0].v;
+
+        /**
+         * The area inside the room, excluding the walls. If room is L-shaped, this will be an array of multiple areas.
+         */
+        this.insideArea = [{
+            u: this.bounds[0].u + 1,
+            v: this.bounds[0].v + 1,
+            width: this.width - 2,
+            height: this.height - 2
+        }];
     }
 
     /**
      * Callback function that takes in the two corners of a side
      * @callback sideCallback
-     * @param {{ x: number, y: number }} point1 One vertex of the side
-     * @param {{ x: number, y: number }} point2 The other vertex of the side
+    * @param {{ u: number, v: number }} point1 One vertex of the side
+    * @param {{ u: number, v: number }} point2 The other vertex of the side
      * @param {number} index The index of the side
      */
 
     /**
      * Modifies room bounds to exclude the given area
-     * @param {{ x: number, y: number }} point The point relative to the top-left corner of the room that will be the new vertex of the bounds
+    * @param {{ u: number, v: number }} point The point relative to the top-left corner of the room that will be the new vertex of the bounds
      * @param {number} direction The direction in which the area will be removed. 0 - top left, 1 - top right, 2 - bottom right, 3 - bottom left
      */
     removeArea(point, direction) {
-        if (point.x <= 0 || point.x >= this.width || point.x <= 0 || point.y >= this.height) {
+        if (point.u <= 0 || point.u >= this.width || point.u <= 0 || point.v >= this.height) {
             throw new Error(`Point ${point} is not in the room.`);
         }
 
-        point.x += this.x;
-        point.y += this.y;
+        point.u += this.u;
+        point.v += this.v;
 
         switch (direction) {
             case 0:
-                this.bounds.push({x: this.bounds[direction].x, y: point.y}, point);
-                this.bounds[0].x = point.x;
+                this.bounds.push({u: this.bounds[direction].u, v: point.v}, point);
+                this.bounds[0].u = point.u;
+
+                this.insideArea = [
+                    {
+                        u: this.bounds[0].u + 1,
+                        v: this.bounds[0].v + 1,
+                        width: this.bounds[1].u - this.bounds[0].u - 1,
+                        height: this.bounds[5].v - this.bounds[0].v
+                    },
+                    {
+                        u: this.bounds[4].u + 1,
+                        v: this.bounds[4].v + 1,
+                        width: this.width - 2,
+                        height: this.bounds[3].v - this.bounds[4].v - 1
+                    }
+                ];
                 break;
             case 1:
+                this.bounds = this.bounds.slice(0, direction).concat(
+                    {u: point.u, v: this.bounds[direction].v},
+                    point,
+                    {u: this.bounds[direction].u, v: point.v})
+                    .concat(this.bounds.slice(direction + 1, this.bounds.length));
+
+                this.insideArea = [
+                    {
+                        u: this.bounds[0].u + 1,
+                        v: this.bounds[0].v + 1,
+                        width: this.bounds[1].u - this.bounds[0].u - 1,
+                        height: this.height - 1
+                    },
+                    {
+                        u: this.bounds[2].u,
+                        v: this.bounds[2].v + 1,
+                        width: this.bounds[3].u - this.bounds[2].u,
+                        height: this.bounds[4].v - this.bounds[3].v - 1
+                    }
+                ];
+                break;
             case 3:
                 this.bounds = this.bounds.slice(0, direction).concat(
-                    {x: point.x, y: this.bounds[direction].y},
+                    {u: point.u, v: this.bounds[direction].v},
                     point,
-                    {x: this.bounds[direction].x, y: point.y})
+                    {u: this.bounds[direction].u, v: point.v})
                     .concat(this.bounds.slice(direction + 1, this.bounds.length));
+
+                this.insideArea = [
+                    {
+                        u: this.bounds[0].u + 1,
+                        v: this.bounds[0].v + 1,
+                        width: this.bounds[1].u - this.bounds[0].u - 1,
+                        height: this.bounds[5].v - this.bounds[0].v - 1
+                    },
+                    {
+                        u: this.bounds[4].u + 1,
+                        v: this.bounds[4].v,
+                        width: this.bounds[2].u - this.bounds[3].u - 1,
+                        height: this.bounds[3].v - this.bounds[4].v
+                    }
+                ];
                 break;
             case 2:
                 this.bounds = this.bounds.slice(0, direction).concat(
-                    {x: this.bounds[direction].x, y: point.y},
+                    {u: this.bounds[direction].u, v: point.v},
                     point,
-                    {x: point.x, y: this.bounds[direction].y})
+                    {u: point.u, v: this.bounds[direction].v})
                     .concat(this.bounds.slice(direction + 1, this.bounds.length));
+
+                this.insideArea = [
+                    {
+                        u: this.bounds[0].u + 1,
+                        v: this.bounds[0].v + 1,
+                        width: this.width - 1,
+                        height: this.bounds[2].v - this.bounds[1].v - 1
+                    },
+                    {
+                        u: this.bounds[0].u + 1,
+                        v: this.bounds[3].v,
+                        width: this.bounds[4].u - this.bounds[5].u - 1,
+                        height: this.bounds[4].v - this.bounds[3].v
+                    }
+                ];
                 break;
         }
 
@@ -148,10 +227,10 @@ class Room {
     checkOverlap(room) {
         // First check bounding box
         if (
-            this.boundingBox.xMin >= room.boundingBox.xMax 
-            || room.boundingBox.xMin >= this.boundingBox.xMax
-            || this.boundingBox.yMin >= room.boundingBox.yMax
-            || room.boundingBox.yMin >= this.boundingBox.yMax
+            this.boundingBox.uMin >= room.boundingBox.uMax 
+            || room.boundingBox.uMin >= this.boundingBox.uMax
+            || this.boundingBox.vMin >= room.boundingBox.vMax
+            || room.boundingBox.vMin >= this.boundingBox.vMax
         ) {
             return false;
         } else if (!this.boundsModified && !room.boundsModified) {
@@ -176,30 +255,30 @@ class Room {
 
             switch (i % 2) {
                 case 0:
-                    if (point1.x < point2.x) {
-                        for (let x = point1.x + 1; x < point2.x; x++) {
-                            if (this.pointInRoom({ x: x, y: point1.y })) {
+                    if (point1.u < point2.u) {
+                        for (let u = point1.u + 1; u < point2.u; u++) {
+                            if (this.pointInRoom({ u: u, v: point1.v })) {
                                 return true;
                             }
                         }
                     } else {
-                        for (let x = point2.x + 1; x < point1.x; x++) {
-                            if (this.pointInRoom({ x: x, y: point2.y })) {
+                        for (let u = point2.u + 1; u < point1.u; u++) {
+                            if (this.pointInRoom({ u: u, v: point2.v })) {
                                 return true;
                             }
                         }
                     }
                     break;
                 case 1:
-                    if (point1.y < point2.y) {
-                        for (let y = point1.y + 1; y < point2.y; y++) {
-                            if (this.pointInRoom({ x: point1.x, y: y })) {
+                    if (point1.v < point2.v) {
+                        for (let v = point1.v + 1; v < point2.v; v++) {
+                            if (this.pointInRoom({ u: point1.u, v: v })) {
                                 return true;
                             }
                         }
                     } else {
-                        for (let y = point2.y + 1; y < point1.y; y++) {
-                            if (this.pointInRoom({ x: point2.x, y: y })) {
+                        for (let v = point2.v + 1; v < point1.v; v++) {
+                            if (this.pointInRoom({ u: point2.u, v: v })) {
                                 return true;
                             }
                         }
@@ -215,7 +294,7 @@ class Room {
     /**
      * Naive check if a given point is within the bounds of the room.
      * Note that the point has to be within the room, not on the boundary.
-     * @param {{x: number, y: number}} point Point to check
+    * @param {{u: number, v: number}} point Point to check
      * @param {number} direction Leave unset.
      * @returns {boolean}
      */
@@ -241,18 +320,18 @@ class Room {
                     const point2 = this.bounds[NEXT_INDEX];
 
                     if (i % 2 === 0) { // Note pattern in bounds: 2nth pair horizontal, 2n+1th pair vertical
-                        if (point1.y !== point.y) {
+                            if (point1.v !== point.v) {
                             continue;
-                        } else if ((point1.x < point.x) === (point.x < point2.x)) {
-                            return false;
+                        } else if ((point1.u < point.u) === (point.u < point2.u)) {
+                                return false;
                         } else {
                             return tryNext();
                         }
                     } else {
-                        if (SIGN * point1.x < SIGN * point.x) {
+                        if (SIGN * point1.u < SIGN * point.u) {
                             continue;
-                        } else if ((point1.y < point.y) === (point.y < point2.y)) {
-                            if (point1.x === point.x) {
+                        } else if ((point1.v < point.v) === (point.v < point2.v)) {
+                                if (point1.u === point.u) {
                                 return false;
                             } else {
                                 count++;
@@ -269,18 +348,18 @@ class Room {
                     const point2 = this.bounds[NEXT_INDEX];
 
                     if (i % 2 === 1) { // Note pattern in bounds: 2nth pair horizontal, 2n+1th pair vertical
-                        if (point1.x !== point.x) {
+                            if (point1.u !== point.u) {
                             continue;
-                        } else if ((point1.y < point.y) === (point.y < point2.y)) {
-                            return false;
+                        } else if ((point1.v < point.v) === (point.v < point2.v)) {
+                                return false;
                         } else {
                             return tryNext();
                         }
                     } else {
-                        if (SIGN * point1.y < SIGN * point.y) {
+                        if (SIGN * point1.v < SIGN * point.v) {
                             continue;
-                        } else if ((point1.x < point.x) === (point.x < point2.x)) {
-                            if (point1.y === point.y) {
+                        } else if ((point1.u < point.u) === (point.u < point2.u)) {
+                                if (point1.v === point.v) {
                                 return false;
                             } else {
                                 count++;
@@ -318,11 +397,11 @@ class Room {
         const side = [this.bounds[index], this.bounds[(index + 1) % this.bounds.length]];
         switch (index % 2) {
             case 0:
-                if (this.pointInRoom({ x: (side[0].x + side[1].x) / 2, y: side[0].y + 1 })) {
+                if (this.pointInRoom({ u: (side[0].u + side[1].u) / 2, v: side[0].v + 1 })) {
                     return 0;
                 } else return 2;
             case 1:
-                if (this.pointInRoom({ x: side[0].x + 1, y: (side[0].x + side[1].x) / 2 })) {
+                if (this.pointInRoom({ u: side[0].u + 1, v: (side[0].v + side[1].v) / 2 })) {
                     return 3;
                 } else return 1;
         }
@@ -335,19 +414,19 @@ class Room {
         let color = 0;
         switch (this.type) {
             case 0:
-                color = 0x000000; // passive - black
+                color = 0xff0000; // aggressive - red
                 break;
             case 1:
-                color = 0xffff00; // chest - yellow
-                break;
-            case 2:
-                color = 0xff9900; // puzzle - orange
-                break;
-            case 3:
                 color = 0xff00ff; // fort - purple
                 break;
+            case 2:
+                color = 0x000000; // passive - black
+                break;
+            case 3:
+                color = 0xff9900; // puzzle - orange
+                break;
             case 4:
-                color = 0xff0000; // aggressive - red
+                color = 0xffff00; // chest - yellow
                 break;
             case 5:
                 color = 0x00ff00; // exit - green
@@ -360,11 +439,16 @@ class Room {
         // Right now this is very naive.
         this.forEachSide((point1, point2, index) => {
             if (index % 2 === 0) {
-                this.scene.add.rectangle((point1.x + point2.x) / 2 + 1, point1.y, Math.abs(point2.x - point1.x) + 1, 1, color);
+                this.scene.add.rectangle((point1.u + point2.u) / 2 + 1, point1.v, Math.abs(point2.u - point1.u) + 1, 1, color);
             } else {
-                this.scene.add.rectangle(point1.x + 1, (point1.y + point2.y) / 2, 1, Math.abs(point2.y - point1.y) + 1, color);
+                this.scene.add.rectangle(point1.u + 1, (point1.v + point2.v) / 2, 1, Math.abs(point2.v - point1.v) + 1, color);
             }
         });
+
+        this.insideArea.forEach((area) => {
+            this.scene.add.rectangle(area.u, area.v, area.width, area.height, 0xdddddd).setOrigin(0, 0);
+        });
+
 
         return this;
     }

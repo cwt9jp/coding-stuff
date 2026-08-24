@@ -1,13 +1,17 @@
+import Phaser from "phaser";
 import { Start } from './scenes/Start.js';
 import { Map } from './scenes/Map.js';
 
+/**
+ * @type {Phaser.Types.Core.GameConfig}
+ */
 const config = {
     type: Phaser.AUTO,
     title: 'The Stronghold',
     description: '',
     parent: 'game-container',
-    width: 64,
-    height: 64,
+    width: 16*16,
+    height: 10*16,
     backgroundColor: '#ffffff',
     physics: {
         default: "arcade",

@@ -1,5 +1,6 @@
 import Player from "../objects/player.js"
 import Goblin from "../objects/goblin.js"
+import Phaser from "phaser";
 
 export class Start extends Phaser.Scene {
 
@@ -22,20 +23,20 @@ export class Start extends Phaser.Scene {
         this.map = this.make.tilemap({ tileWidth: 16, tileHeight: 16, width: this.width / 16 + 1, height: this.height / 16 + 1 });
         this.tiles = this.map.addTilesetImage('tiles');
 
-        this.groundLayer = this.map.createBlankLayer("Ground Layer", this.tiles, -16, -17);
+        this.groundLayer = this.map.createBlankLayer("Ground Layer", this.tiles, -16, -16);
 
         this.groundLayer.weightedRandomize([
-            { index: 11, weight: 42 },
+            { index: 13, weight: 42 },
+            { index: 0, weight: 1 },
             { index: 1, weight: 1 },
             { index: 2, weight: 1 },
             { index: 3, weight: 1 },
             { index: 4, weight: 1 },
             { index: 5, weight: 1 },
-            { index: 6, weight: 1 },
+            { index: 6, weight: 2 },
             { index: 7, weight: 2 },
             { index: 8, weight: 2 },
             { index: 9, weight: 2 },
-            { index: 10, weight: 2 },
         ], 1, 1, this.map.width, this.map.height);
         
         // Randomize rotation
@@ -69,6 +70,7 @@ export class Start extends Phaser.Scene {
 
     update() {
         // Move player
+        this.cameras.main.centerOn(Math.round(this.player.x), Math.round(this.player.y));
         this.player.updateVelocityFromKeyPress(this.movementKeys);
         this.player.updateDepth();
 

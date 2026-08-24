@@ -1,4 +1,5 @@
 import Room from "./Room.js";
+import Phaser from "phaser";
 
 /**
  * Class for generating and handling all Floor 1 (The Basement / Foyer) activities
@@ -10,7 +11,7 @@ class Floor1 {
      * @param {Phaser.Scene} scene The Floor 1 scene. TODO: Update type so it is the right scene
      * @param {number} roomNumber The amount of rooms this floor will attempt to generate. May be lower than intended, especially for higher amounts
      * @param {number} difficulty Scale from 1-10 on how difficult this floor should be.
-     * @param {number[]} roomWeights Array of weights that determine the likelihood of a room a specific type. Should be 6 long, all entries sum to 1
+     * @param {number[]} roomWeights Array of weights that determine the likelihood of a room a specific type. Should be 5 long (aggressive, fort, passive, puzzle, chest)
      */
     constructor(scene, roomNumber, difficulty, roomWeights) {
         /**
@@ -29,7 +30,7 @@ class Floor1 {
         this.difficulty = difficulty;
 
         /**
-         * Array of probabilities that each room type will spawn (0 - passive, 1 - chest, 2 - puzzle, 3 - fort, 4 - aggressive, 5 - exit)
+         * Array of probabilities that each room type will spawn (0 - aggressive, 1 - fort, 2 - passive, 3 - puzzle, 4 - chest)
          */
         this.roomWeights = roomWeights;
 
@@ -47,8 +48,8 @@ class Floor1 {
         // First room
         this.rooms.push(new Room(
             this.scene,
-            Phaser.Math.RND.between(28, 36),
-            Phaser.Math.RND.between(28, 36),
+            0,
+            0,
             Phaser.Math.RND.between(7, 9),
             Phaser.Math.RND.between(7, 9),
             Phaser.Math.RND.between(0, 3), 6)
@@ -56,8 +57,8 @@ class Floor1 {
 
         if (Phaser.Math.RND.between(1, 3) === 1) {
             this.rooms[0].removeArea({
-                x: Math.trunc(this.rooms[0].width / 2),
-                y: Math.trunc(this.rooms[0].height / 2)
+                    u: Math.floor(this.rooms[0].width / 2),
+                    v: Math.floor(this.rooms[0].height / 2)
             }, Phaser.Math.RND.between(0, 3));
         }
         
@@ -65,7 +66,7 @@ class Floor1 {
         for (let i = 0; i < this.roomNumber - 1; i++) {
             for (let j = 0; j < 5 * i + 1; j++) {
                 // Random room
-                const adjacentRoom = Phaser.Math.RND.weightedPick(this.rooms);
+                const adjacentRoom = Phaser.Math.RND.pick(this.rooms);
                 // Random side index
                 const sideIndex = Phaser.Math.RND.between(0, adjacentRoom.bounds.length - 1);
                 // Random side
@@ -73,23 +74,24 @@ class Floor1 {
 
                 const potentialRoom = new Room(
                     this.scene,
-                    Phaser.Math.RND.between(side[0].x, side[1].x),
-                    Phaser.Math.RND.between(side[0].y, side[1].y),
+                        Phaser.Math.RND.between(side[0].u, side[1].u),
+                        Phaser.Math.RND.between(side[0].v, side[1].v),
                     Phaser.Math.RND.weightedPick([10, 11, 12, 13, 14, 15, 16, 17, 18]),
                     Phaser.Math.RND.weightedPick([10, 11, 12, 13, 14, 15, 16, 17, 18]),
                     adjacentRoom.sideDirection(sideIndex),
-                    Phaser.Math.RND.weightedPick([4, 4, 3, 0, 2, 1])
+                    0 // Doesn't make sense to set the type if room may not be generated, so just set it to 0 for now
                 );
 
                 // Make room L-shaped
                 if (Phaser.Math.RND.between(1, 3) === 1) {
                     potentialRoom.removeArea({
-                        x: Phaser.Math.RND.between(5, potentialRoom.width - 5),
-                        y: Phaser.Math.RND.between(3, potentialRoom.height - 5)
+                        u: Phaser.Math.RND.between(5, potentialRoom.width - 5),
+                        v: Phaser.Math.RND.between(3, potentialRoom.height - 5)
                     }, Phaser.Math.RND.pick([potentialRoom.direction, (potentialRoom.direction + 1) % potentialRoom.bounds.length]))
                 }
 
                 if (!this.checkPotentialOverlap(potentialRoom)) {
+                    potentialRoom.type = this.randomWeightedPick([0, 1, 2, 3, 4], this.roomWeights);
                     this.rooms.push(potentialRoom);
                     break;
                 } else continue;
@@ -100,25 +102,65 @@ class Floor1 {
         this.rooms.at(-2).type = 3;
         this.rooms.at(-1).type = 5;
 
-        this.rooms.forEach((room) => {
-            room.render();
-        })
+        this.render();
 
-        console.log(this);
+        console.log(this); // debug
         return this;
     }
 
     /**
-     * Generates a random integer point within the bounds.
-     * @param {number} x1 Lowest x-value
-     * @param {number} x2 Highest x-value
-     * @param {number} y1 Lowest y-value
-     * @param {number} y2 Highest y-value
+     * Renders the floor. Called in generate() after all rooms are generated.
      */
-    randomPoint(x1, x2, y1, y2) {
-        return {
-            x: Phaser.Math.RND.between(x1, x2),
-            y: Phaser.Math.RND.between(y1, y2)
+    render() {
+        const floorBoundingBox = this.getFloorBoundingBox();
+
+        this.map = this.scene.make.tilemap({ tileWidth: 16, tileHeight: 16, width: floorBoundingBox.width, height: floorBoundingBox.height });
+        this.tiles = this.map.addTilesetImage('tiles');
+
+        this.groundLayer = this.map.createBlankLayer("Ground Layer", this.tiles, floorBoundingBox.u * 16, floorBoundingBox.v * 16);
+        this.groundLayer.fill(16);
+
+        this.rooms.forEach((room) => {
+            room.render();
+        })
+    }
+
+    // /**
+    //  * Generates a random integer point within the bounds.
+    //  * @param {number} u1 Lowest u-value
+    //  * @param {number} u2 Highest u-value
+    //  * @param {number} v1 Lowest v-value
+    //  * @param {number} v2 Highest v-value
+    //  */
+    // randomPoint(u1, u2, v1, v2) {
+    //     return {
+    //         u: Phaser.Math.RND.between(u1, u2),
+    //         v: Phaser.Math.RND.between(v1, v2)
+    //     }
+    // }
+
+    /**
+     * Picks a random element from an array based on weighted probabilities.
+     * 
+     * @param {T[]} array 
+     * @param {number[]} weights 
+     * 
+     * @returns {T} A random element from the array, chosen based on the provided weights.
+     */
+    randomWeightedPick(array, weights) {
+        if (array.length !== weights.length) {
+            throw new Error("Array and weights must have the same length.");
+        }
+
+        const totalWeight = weights.reduce((acc, weight) => acc + weight, 0);
+        const randomValue = Phaser.Math.RND.between(0, totalWeight - 1);
+        let cumulativeWeight = 0;
+
+        for (let i = 0; i < array.length; i++) {
+            cumulativeWeight += weights[i];
+            if (randomValue < cumulativeWeight) {
+                return array[i];
+            }
         }
     }
     
@@ -134,6 +176,24 @@ class Floor1 {
         }
 
         return false;
+    }
+
+    /**
+     * Gets the total bounding box (in tiles) of the floor based on the rooms generated.
+    * @returns {{u: number, v: number, width: number, height: number}} The bounding box of the floor.
+     */
+    getFloorBoundingBox() {
+        let minU = Infinity, minV = Infinity, maxU = -Infinity, maxV = -Infinity;
+
+        this.rooms.forEach((room) => {
+            const { u, v, width, height } = room;
+            minU = Math.min(minU, u);
+            minV = Math.min(minV, v);
+            maxU = Math.max(maxU, u + width);
+            maxV = Math.max(maxV, v + height);
+        });
+
+        return { u: minU, v: minV, width: maxU - minU, height: maxV - minV };
     }
 }
 

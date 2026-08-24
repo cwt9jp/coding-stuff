@@ -1,3 +1,5 @@
+import Phaser from "phaser";
+
 /**
  * Player is 12 wide and 24 tall
  */

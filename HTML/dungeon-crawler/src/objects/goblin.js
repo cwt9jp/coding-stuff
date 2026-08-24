@@ -1,3 +1,4 @@
+import Phaser from "phaser";
 import Player from "./player.js"
 
 /**
