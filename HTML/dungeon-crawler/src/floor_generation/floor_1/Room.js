@@ -160,7 +160,7 @@ class Room {
                         u: this.bounds[0].u + 1,
                         v: this.bounds[0].v + 1,
                         width: this.bounds[1].u - this.bounds[0].u - 1,
-                        height: this.height - 1
+                        height: this.height - 2
                     },
                     {
                         u: this.bounds[2].u,
@@ -203,7 +203,7 @@ class Room {
                     {
                         u: this.bounds[0].u + 1,
                         v: this.bounds[0].v + 1,
-                        width: this.width - 1,
+                        width: this.width - 2,
                         height: this.bounds[2].v - this.bounds[1].v - 1
                     },
                     {
@@ -388,6 +388,7 @@ class Room {
     /**
      * Gets the outward direction with respect to the given side.
      * @param {number} index The index of the side whose direction will be checked.
+     * @returns {0 | 1 | 2 | 3} The outward direction with respect to the given side. 0 - top, 1 - right, 2 - bottom, 3 - left
      */
     sideDirection(index) {
         if (index >= this.bounds.length) {
@@ -405,50 +406,33 @@ class Room {
                     return 3;
                 } else return 1;
         }
+        throw new Error("Some error occurred while determining the side direction.");
     }
 
     /**
-     * Renders room to the screen. TODO: tilemap
+     * Renders room to the screen.
+     * 
+     * @param {Phaser.Tilemaps.TilemapLayer} tileLayer The tile layer to render the room on.
+     * @param {{u: number, v: number, width: number, height: number}} floorBoundingBox The bounding box of the floor.
      */
-    render() {
-        let color = 0;
-        switch (this.type) {
-            case 0:
-                color = 0xff0000; // aggressive - red
-                break;
-            case 1:
-                color = 0xff00ff; // fort - purple
-                break;
-            case 2:
-                color = 0x000000; // passive - black
-                break;
-            case 3:
-                color = 0xff9900; // puzzle - orange
-                break;
-            case 4:
-                color = 0xffff00; // chest - yellow
-                break;
-            case 5:
-                color = 0x00ff00; // exit - green
-                break;
-            case 6:
-                color = 0x0000ff; // entrance - blue
-                break;
-        }
+    render(tileLayer, floorBoundingBox) {
+        // Render the inside area of the room on the specified tile layer, adjusted for the floor bounding box.
+        this.insideArea.forEach((area) => {
+            tileLayer.fill(13, area.u - floorBoundingBox.u, area.v - floorBoundingBox.v, area.width, area.height);
+        });
 
-        // Right now this is very naive.
+        // Render the walls of the room on the specified tile layer, adjusted for the floor bounding box.
         this.forEachSide((point1, point2, index) => {
-            if (index % 2 === 0) {
-                this.scene.add.rectangle((point1.u + point2.u) / 2 + 1, point1.v, Math.abs(point2.u - point1.u) + 1, 1, color);
-            } else {
-                this.scene.add.rectangle(point1.u + 1, (point1.v + point2.v) / 2, 1, Math.abs(point2.v - point1.v) + 1, color);
+            const direction = this.sideDirection(index);
+
+            // Depending on the side direction, render the appropriate wall tile (keep in account if walls have already been generated, as they can overlap)
+            switch (direction) {
+                case 0:
+                    if (tileLayer.getTileAt(point1.u - floorBoundingBox.u, point1.v - floorBoundingBox.v).index == 14) {
+
+                    }
             }
         });
-
-        this.insideArea.forEach((area) => {
-            this.scene.add.rectangle(area.u, area.v, area.width, area.height, 0xdddddd).setOrigin(0, 0);
-        });
-
 
         return this;
     }

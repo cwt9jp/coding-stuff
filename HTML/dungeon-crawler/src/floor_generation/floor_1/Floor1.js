@@ -121,7 +121,7 @@ class Floor1 {
         this.groundLayer.fill(16);
 
         this.rooms.forEach((room) => {
-            room.render();
+            room.render(this.groundLayer, floorBoundingBox);
         })
     }
 

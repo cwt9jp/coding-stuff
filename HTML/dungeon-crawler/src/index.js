@@ -10,8 +10,8 @@ const config = {
     title: 'The Stronghold',
     description: '',
     parent: 'game-container',
-    width: 16*16,
-    height: 10*16,
+    width: 48*16,
+    height: 30*16,
     backgroundColor: '#ffffff',
     physics: {
         default: "arcade",
