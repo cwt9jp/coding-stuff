@@ -1,4 +1,5 @@
 import Room from "./Room.js";
+import ThresholdRoom from "./ThresholdRoom.js";
 import Phaser from "phaser";
 
 /**
@@ -39,6 +40,12 @@ class Floor1 {
          * @type {Room[]}
          */
         this.rooms = [];
+
+        /**
+         * Array of all threshold rooms on the floor
+         * @type {Room[]}
+         */
+        this.thresholdRooms = [];
     }
 
     /**
@@ -50,8 +57,8 @@ class Floor1 {
             this.scene,
             0,
             0,
-            Phaser.Math.RND.between(7, 9),
-            Phaser.Math.RND.between(7, 9),
+            Phaser.Math.RND.between(9, 11),
+            Phaser.Math.RND.between(9, 11),
             Phaser.Math.RND.between(0, 3), 6)
         );
 
@@ -71,14 +78,25 @@ class Floor1 {
                 const sideIndex = Phaser.Math.RND.between(0, adjacentRoom.bounds.length - 1);
                 // Random side
                 const side = [adjacentRoom.bounds[sideIndex], adjacentRoom.bounds[(sideIndex + 1) % adjacentRoom.bounds.length]];
+                const sideDirection = adjacentRoom.sideDirection(sideIndex);
+
+                const potentialThresholdRoom = new ThresholdRoom(
+                    this.scene,
+                    (sideDirection == 0 || sideDirection == 2) ? Phaser.Math.RND.between(side[0].u + 2 * Math.sign(2 - sideDirection), side[1].u - 2 * Math.sign(2 - sideDirection)) : side[0].u,
+                    (sideDirection == 1 || sideDirection == 3) ? Phaser.Math.RND.between(side[0].v + 2 * Math.sign(2 - sideDirection), side[1].v - 2 * Math.sign(2 - sideDirection)) : side[0].v,
+                    (sideDirection == 0 || sideDirection == 2) ? Phaser.Math.RND.between(3, 4) : Phaser.Math.RND.between(5, 8),
+                    (sideDirection == 1 || sideDirection == 3) ? Phaser.Math.RND.between(3, 4) : Phaser.Math.RND.between(5, 8),
+                    sideDirection);
+
+                const potentialThresholdGenerationSide = [potentialThresholdRoom.bounds[sideDirection], potentialThresholdRoom.bounds[(sideDirection + 1) % potentialThresholdRoom.bounds.length]];
 
                 const potentialRoom = new Room(
                     this.scene,
-                        Phaser.Math.RND.between(side[0].u, side[1].u),
-                        Phaser.Math.RND.between(side[0].v, side[1].v),
-                    Phaser.Math.RND.weightedPick([10, 11, 12, 13, 14, 15, 16, 17, 18]),
-                    Phaser.Math.RND.weightedPick([10, 11, 12, 13, 14, 15, 16, 17, 18]),
-                    adjacentRoom.sideDirection(sideIndex),
+                        Phaser.Math.RND.between(potentialThresholdGenerationSide[0].u, potentialThresholdGenerationSide[1].u),
+                        Phaser.Math.RND.between(potentialThresholdGenerationSide[0].v, potentialThresholdGenerationSide[1].v),
+                    Phaser.Math.RND.weightedPick([15, 16, 17, 18, 19, 20, 21, 22, 23]),
+                    Phaser.Math.RND.weightedPick([15, 16, 17, 18, 19, 20, 21, 22, 23]),
+                    sideDirection,
                     0 // Doesn't make sense to set the type if room may not be generated, so just set it to 0 for now
                 );
 
@@ -93,6 +111,7 @@ class Floor1 {
                 if (!this.checkPotentialOverlap(potentialRoom)) {
                     potentialRoom.type = this.randomWeightedPick([0, 1, 2, 3, 4], this.roomWeights);
                     this.rooms.push(potentialRoom);
+                    this.thresholdRooms.push(potentialThresholdRoom);
                     break;
                 } else continue;
             }
@@ -123,6 +142,40 @@ class Floor1 {
         this.rooms.forEach((room) => {
             room.render(this.groundLayer, floorBoundingBox);
         })
+
+        this.thresholdRooms.forEach((thresholdRoom) => {
+            thresholdRoom.render(this.groundLayer, floorBoundingBox);
+        });
+
+        // Add collision
+        this.groundLayer.forEachTile((tile) => {
+            // A little optimization
+            if (tile.index == 16 || tile.index == 13) {return;}
+
+            if ([10, 11, 12, 14, 15, 17, 18].includes(tile.index)) {
+                tile.setCollision(true);
+
+                switch (tile.index) {
+                    case 10:
+                    case 11:
+                    case 12:
+                        tile.physics.top = 5;
+                        break;
+                    case 14:
+                        tile.physics.right = 5;
+                        break;
+                    case 15:
+                        tile.physics.left = 5;
+                        break;
+                    case 17:
+                        tile.physics.left = 11;
+                        break;
+                    case 18:
+                        tile.physics.right = 11;
+                        break;
+                }
+            }
+        });
     }
 
     // /**

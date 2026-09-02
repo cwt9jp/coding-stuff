@@ -16,9 +16,8 @@ class Room {
      * @param {number} v The v-position of the entrance to the room
      * @param {number} width The width of the room
      * @param {number} height The height of the room
-     * @type {Array<{ u: number, v: number }>} 
      * @param {0 | 1 | 2 | 3} side The side of the room that this room will be generating next to. 0 - top, 1 - right, 2 - bottom, 3 - left
-     * @param {0 | 1 | 2 | 3 | 4 | 5 | 6} type The type of room this will be. 0 - aggressive, 1 - fort, 2 - passive, 3 - puzzle, 4 - chest, 5 - exit, 6 - entrance
+     * @param {-1 | 0 | 1 | 2 | 3 | 4 | 5 | 6} type The type of room this will be. -1 - threshold, 0 - aggressive, 1 - fort, 2 - passive, 3 - puzzle, 4 - chest, 5 - exit, 6 - entrance
      */
     constructor(scene, u, v, width, height, side, type) {
 
@@ -77,7 +76,7 @@ class Room {
         this.scene = scene;
 
         /**
-         * The type of this room. 0 - passive, 1 - chest, 2 - puzzle, 3 - fort, 4 - aggressive, 5 - exit, 6 - entrance
+         * The type of this room. -1 - threshold room, 0 - aggressive, 1 - fort, 2 - passive, 3 - puzzle, 4 - chest, 5 - exit, 6 - entrance
          */
         this.type = type;
 
@@ -227,10 +226,10 @@ class Room {
     checkOverlap(room) {
         // First check bounding box
         if (
-            this.boundingBox.uMin >= room.boundingBox.uMax 
-            || room.boundingBox.uMin >= this.boundingBox.uMax
-            || this.boundingBox.vMin >= room.boundingBox.vMax
-            || room.boundingBox.vMin >= this.boundingBox.vMax
+            this.boundingBox.uMin > room.boundingBox.uMax 
+            || room.boundingBox.uMin > this.boundingBox.uMax
+            || this.boundingBox.vMin > room.boundingBox.vMax
+            || room.boundingBox.vMin > this.boundingBox.vMax
         ) {
             return false;
         } else if (!this.boundsModified && !room.boundsModified) {
@@ -293,12 +292,41 @@ class Room {
 
     /**
      * Naive check if a given point is within the bounds of the room.
-     * Note that the point has to be within the room, not on the boundary.
+     * Note that this INCLUDES points on the boundary of the room.
     * @param {{u: number, v: number}} point Point to check
      * @param {number} direction Leave unset.
      * @returns {boolean}
      */
     pointInRoom(point, direction = -2) {
+        // On first iteration, check boundary points
+        if (direction === -2) {
+            let onBoundary = false;
+            this.forEachSide((point1, point2, index) => {
+                if (onBoundary) {
+                    return;
+                }
+                switch (index % 2) {
+                    case 0:
+                        if (point1.v === point.v && (((point1.u <= point.u) == (point.u <= point2.u)) || point1.u === point.u || point.u === point2.u)) {
+                            onBoundary = true;
+                            return;
+                        }
+                        break;
+                    case 1:
+                        if (point1.u === point.u && (((point1.v <= point.v) == (point.v <= point2.v)) || point1.v === point.v || point.v === point2.v)) {
+                            onBoundary = true;
+                            return;
+                        }
+                        break;
+                }
+            });
+
+            if (onBoundary) {
+                return true;
+            }
+        }
+
+
         // We will use the horizontal line test to determine the point's location
         // Odd intersections with room - inside, Even - outside
         let count = 0;
@@ -428,9 +456,58 @@ class Room {
             // Depending on the side direction, render the appropriate wall tile (keep in account if walls have already been generated, as they can overlap)
             switch (direction) {
                 case 0:
-                    if (tileLayer.getTileAt(point1.u - floorBoundingBox.u, point1.v - floorBoundingBox.v).index == 14) {
+                    const startU0 = point1.u - floorBoundingBox.u;
+                    const startV0 = point1.v - floorBoundingBox.v;
+                    const endU0 = point2.u - floorBoundingBox.u;
 
+                    if (!(index == 2)) {
+                        tileLayer.putTileAt(12, startU0, startV0);
+                    } else {
+                        tileLayer.putTileAt(17, startU0, startV0);
                     }
+
+                    tileLayer.fill(10, startU0 + 1, startV0, endU0 - startU0 - 1, 1);
+                    break;
+                case 1:
+                    const startU1 = point1.u - floorBoundingBox.u;
+                    const startV1 = point1.v - floorBoundingBox.v;
+                    const endV1 = point2.v - floorBoundingBox.v;
+
+                    if (!(index == 3 && point1.u != this.boundingBox.uMax)) {
+                        tileLayer.putTileAt(11, startU1, startV1);
+                    } else {
+                        tileLayer.putTileAt(15, startU1, startV1);
+                    }
+
+                    tileLayer.fill(15, startU1, startV1 + 1, 1, endV1 - startV1 - 1);
+                    break;
+                // Cases 2 and 3 have their p1/p2 reversed compared to cases 0 and 1
+                case 2:
+                    const endU2 = point1.u - floorBoundingBox.u;
+                    const endV2 = point1.v - floorBoundingBox.v;
+                    const startU2 = point2.u - floorBoundingBox.u;
+
+                    if (!(index == 4 && point1.v != this.boundingBox.vMax)) {
+                        tileLayer.putTileAt(10, endU2, endV2);
+                    } else {
+                        tileLayer.putTileAt(14, endU2, endV2);
+                    }
+                    
+                    tileLayer.fill(10, startU2 + 1, endV2, endU2 - startU2 - 1, 1);
+                    break;
+                case 3:
+                    const endV3 = point1.v - floorBoundingBox.v;
+                    const endU3 = point1.u - floorBoundingBox.u;
+                    const startV3 = point2.v - floorBoundingBox.v;
+
+                    if (!(index == 5 && point1.u != this.boundingBox.uMin)) {
+                        tileLayer.putTileAt(10, endU3, endV3);
+                    } else {
+                        tileLayer.putTileAt(18, endU3, endV3);
+                    }
+
+                    tileLayer.fill(14, endU3, startV3 + 1, 1, endV3 - startV3 - 1);
+                    break;
             }
         });
 

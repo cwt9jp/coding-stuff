@@ -20,35 +20,46 @@ class Player extends Phaser.GameObjects.Rectangle {
         this.canDash = true;
         this.hittable = false;
 
+        /**
+         * @type {{up: Phaser.Input.Keyboard.Key, left: Phaser.Input.Keyboard.Key, down: Phaser.Input.Keyboard.Key, right: Phaser.Input.Keyboard.Key, dash: Phaser.Input.Keyboard.Key}}
+         */
+        this.movementKeys = this.scene.input.keyboard.addKeys({
+            up: Phaser.Input.Keyboard.KeyCodes.W,
+            left: Phaser.Input.Keyboard.KeyCodes.A,
+            down: Phaser.Input.Keyboard.KeyCodes.S,
+            right: Phaser.Input.Keyboard.KeyCodes.D,
+            dash: Phaser.Input.Keyboard.KeyCodes.SHIFT
+        });
+
     }
 
     /**
      * Updates player velocity based on inputs
      */
-    updateVelocityFromKeyPress(keys) {
+    updateVelocityFromKeyPress() {
         if (!this.canMove) {
             return;
         }
 
         // Normal movement
-        if (keys.left.isDown & !keys.right.isDown) {
+        if (this.movementKeys.left.isDown & !this.movementKeys.right.isDown) {
             this.body.setVelocityX(-50);
-        } else if (keys.right.isDown & !keys.left.isDown) {
+        } else if (this.movementKeys.right.isDown & !this.movementKeys.left.isDown) {
             this.body.setVelocityX(50);
         } else {
             this.body.setVelocityX(0);
         }
 
-        if (keys.up.isDown & !keys.down.isDown) {
+        if (this.movementKeys.up.isDown & !this.movementKeys.down.isDown) {
             this.body.setVelocityY(-50);
-        } else if (keys.down.isDown & !keys.up.isDown) {
+        } else if (this.movementKeys.down.isDown & !this.movementKeys.up.isDown) {
             this.body.setVelocityY(50);
         } else {
             this.body.setVelocityY(0);
         }
 
         // Dashing
-        if (keys.dash.isDown) {
+        if (this.movementKeys.dash.isDown) {
             if (this.canDash) {
                 this.canMove = false;
                 this.canDash = false;
