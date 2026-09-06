@@ -137,6 +137,7 @@ class Floor1 {
         this.tiles = this.map.addTilesetImage('tiles');
 
         this.groundLayer = this.map.createBlankLayer("Ground Layer", this.tiles, floorBoundingBox.u * 16, floorBoundingBox.v * 16);
+        this.groundLayer.setDepth(-Infinity); // TODO: set to low value later
         this.groundLayer.fill(16);
 
         this.rooms.forEach((room) => {
@@ -147,31 +148,38 @@ class Floor1 {
             thresholdRoom.render(this.groundLayer, floorBoundingBox);
         });
 
-        // Add collision
+        // Add collision TODO: Fix holes
+        this.wallSprites = this.scene.physics.add.staticGroup();
+
         this.groundLayer.forEachTile((tile) => {
-            // A little optimization
-            if (tile.index == 16 || tile.index == 13) {return;}
+            if (tile.index === 13 || tile.index === 16) { return; } // Skip floor tiles
 
             if ([10, 11, 12, 14, 15, 17, 18].includes(tile.index)) {
-                tile.setCollision(true);
-
                 switch (tile.index) {
                     case 10:
                     case 11:
                     case 12:
-                        tile.physics.top = 5;
+                        const wallSpriteCase1 = this.scene.physics.add.staticSprite(this.groundLayer.tileToWorldX(tile.x), this.groundLayer.tileToWorldY(tile.y), "tile_sprites", tile.index).setOrigin(0, 0);
+                        wallSpriteCase1.body.setSize(tile.width, 5, true);
+                        wallSpriteCase1.body.setOffset(8, 19);
+                        wallSpriteCase1.setDepth(wallSpriteCase1.y + 11);
+                        this.wallSprites.add(wallSpriteCase1);
                         break;
                     case 14:
-                        tile.physics.right = 5;
+                    case 18:
+                        const wallSpriteCase2 = this.scene.physics.add.staticSprite(this.groundLayer.tileToWorldX(tile.x), this.groundLayer.tileToWorldY(tile.y), "tile_sprites", tile.index).setOrigin(0, 0);
+                        wallSpriteCase2.body.setSize(5, tile.height, true);
+                        wallSpriteCase2.body.setOffset(8, 8);
+                        wallSpriteCase2.setDepth(-10000);
+                        this.wallSprites.add(wallSpriteCase2);
                         break;
                     case 15:
-                        tile.physics.left = 5;
-                        break;
                     case 17:
-                        tile.physics.left = 11;
-                        break;
-                    case 18:
-                        tile.physics.right = 11;
+                        const wallSpriteCase3 = this.scene.physics.add.staticSprite(this.groundLayer.tileToWorldX(tile.x), this.groundLayer.tileToWorldY(tile.y), "tile_sprites", tile.index).setOrigin(0, 0);
+                        wallSpriteCase3.body.setSize(5, tile.height, true);
+                        wallSpriteCase3.body.setOffset(19, 8);
+                        wallSpriteCase3.setDepth(-10000);
+                        this.wallSprites.add(wallSpriteCase3);
                         break;
                 }
             }

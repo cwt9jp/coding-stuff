@@ -64,15 +64,15 @@ class Player extends Phaser.GameObjects.Rectangle {
                 this.canMove = false;
                 this.canDash = false;
 
-                this.body.velocity.x *= 8;
-                this.body.velocity.y *= 8;
+                this.body.velocity.x *= 4;
+                this.body.velocity.y *= 4;
 
                 this.scene.tweens.add({
                     targets: this.body.velocity,
                     x: 0,
                     y: 0,
 
-                    ease: "Cubic.easeOut",
+                    ease: "Cubic.easeInOut",
                     duration: 300,
                     repeat: 0,
                     yoyo: false,
